@@ -19,21 +19,33 @@ class specialPagesExport extends SpecialPage {
 		
 		$do_show = $wgRequest->getText ( 'show' );
 		if (strlen ( trim ( $do_show ) )) {
-			$page_touched = (int)$wgRequest->getText ( 'from_year' )?:2000;
-			$page_touched .= (int)$wgRequest->getText ( 'from_month' )?$wgRequest->getText ( 'from_month' ):01;
-			$page_touched .= (int)$wgRequest->getText ( 'from_day' )?$wgRequest->getText ( 'from_day' ):01;
-			$page_touched .= '000000';
+                        //start date
+			$start_date = (int)$wgRequest->getText ( 'from_year' )?:2000;
+			$start_date .= (int)$wgRequest->getText ( 'from_month' )?$wgRequest->getText ( 'from_month' ):01;
+			$start_date .= (int)$wgRequest->getText ( 'from_day' )?$wgRequest->getText ( 'from_day' ):01;
+			$start_date .= '000000';
+                        
+                        //end date
+ 			$end_date = (int)$wgRequest->getText ( 'to_year' )?:date('Y');
+			$end_date .= (int)$wgRequest->getText ( 'to_month' )?$wgRequest->getText ( 'to_month' ):date('m');
+			$end_date .= (int)$wgRequest->getText ( 'to_day' )?$wgRequest->getText ( 'to_day' ):date('d');
+			$end_date .= '000000';                       
+                        
 		}else{
-			//Default page touched (if nothing wasn't selected
-			$page_touched = '20000101000000';
+			//Default start date (if nothing wasn't selected
+			$start_date = '20000101000000';
+                        $end_date = date('Ymdhis');
 		}
-
+                
+                
+                
 		$sql = "SELECT page_id, page_namespace, CONVERT(page_title USING utf8) page_title, 
 												CONVERT(page_touched USING utf8) page_touched
 					FROM page
-					WHERE page_touched > '$page_touched'
+					WHERE page_touched BETWEEN '$start_date' AND '$end_date'  
 					ORDER BY page_touched DESC";
 		
+                //echo $sql;die;
 		
 		$do_export = $wgRequest->getText ( 'export' );
 		if (strlen ( trim ( $do_export ) )) {
@@ -42,9 +54,12 @@ class specialPagesExport extends SpecialPage {
 		$dbr = wfGetDB ( DB_SLAVE );
 		$result = $dbr->query ( $sql );
 		
+                
 		//Show form
-		$output = '<h3>Limit export time period from</h3>';
+		$output = '<h3>Limit export time period</h3>';
 		$output .= '<form action="" method="get">';
+                
+                $output .= "<div style='float:left;display:inline-block;border:1px solid #EDEFF4;padding:5px'><h4>From</h4>";
 		$output .= '<select name="from_day">';
 		$output .= $this->_getDaysOptions((int)$wgRequest->getText ( 'from_day' ));
 		$output .= '</select>';
@@ -54,7 +69,22 @@ class specialPagesExport extends SpecialPage {
 		$output .= '<select name="from_year">';
 		$output .= $this->_getYearsOptions((int)$wgRequest->getText ( 'from_year' ), 10);
 		$output .= '</select>';
+                $output .= '</div>';
+                
+                $output .= "<div style='display:inline-block;border:1px solid #EDEFF4;padding:5px'><h4>To</h4>";
+		$output .= '<select name="to_day">';
+		$output .= $this->_getDaysOptions((int)$wgRequest->getText ( 'to_day' ));
+		$output .= '</select>';
+		$output .= '<select name="to_month">';
+		$output .= $this->_getMonthsOptions((int)$wgRequest->getText ( 'to_month' ));
+		$output .= '</select>';
+		$output .= '<select name="to_year">';
+		$output .= $this->_getYearsOptions((int)$wgRequest->getText ( 'to_year' ), 10);
+		$output .= '</select>';
+                $output .= '</div>';                
+                
 		$output .= '<br/>';
+                $output .= '<br/>';
 		$output .= '<input type="hidden" name="show" value="true">';
 		$output .= '<input type="submit" value="show data">';
 		$output .= '</form>';
@@ -204,7 +234,10 @@ class specialPagesExport extends SpecialPage {
 			}else{
 				$selected_text = '';
 			}
-			$options .= "<option $selected_text value='$i'>$i</options>";
+                        
+                        $val = ($i<10) ? "0$i" : $i;
+                        
+			$options .= "<option $selected_text value='$val'>$i</options>";
 		}
 		
 		return $options;
